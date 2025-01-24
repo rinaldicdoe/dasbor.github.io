@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Sales Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.2.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .chart {
+            margin-bottom: 40px;
+        }
+        #upload {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Sales Dashboard</h1>
+
+    <input type="file" id="upload" accept="application/json">
+
+    <div id="total-sales-chart" class="chart"></div>
+    <div id="sales-by-category-chart" class="chart"></div>
+    <div id="top-salespeople-chart" class="chart"></div>
+    <div id="sales-by-region-chart" class="chart"></div>
+    <div id="feedback-analysis-chart" class="chart"></div>
+
+    <script>
+        const uploadInput = document.getElementById('upload');
+        
+        uploadInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = JSON.parse(e.target.result);
+                    generateDashboard(data);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function generateDashboard(data) {
+            const groupedByDate = data.reduce((acc, sale) => {
+                acc[sale.Tanggal] = acc[sale.Tanggal] || { netSales: 0 };
+                acc[sale.Tanggal].netSales += sale.Net_Sales;
+                return acc;
+            }, {});
+
+            const dates = Object.keys(groupedByDate);
+            const netSales = dates.map(date => groupedByDate[date].netSales);
+
+            Plotly.newPlot('total-sales-chart', [{
+                x: dates,
+                y: netSales,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Net Sales'
+            }], {
+                title: 'Total Sales by Date',
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Net Sales (IDR)' }
+            });
+
+            const groupedByCategory = data.reduce((acc, sale) => {
+                acc[sale.Kategori] = acc[sale.Kategori] || 0;
+                acc[sale.Kategori] += sale.Net_Sales;
+                return acc;
+            }, {});
+
+            const categories = Object.keys(groupedByCategory);
+            const categorySales = categories.map(cat => groupedByCategory[cat]);
+
+            Plotly.newPlot('sales-by-category-chart', [{
+                labels: categories,
+                values: categorySales,
+                type: 'pie'
+            }], {
+                title: 'Sales Distribution by Product Category'
+            });
+
+            const groupedBySalesperson = data.reduce((acc, sale) => {
+                acc[sale.Salesman] = acc[sale.Salesman] || 0;
+                acc[sale.Salesman] += sale.Net_Sales;
+                return acc;
+            }, {});
+
+            const salespeople = Object.keys(groupedBySalesperson);
+            const salespersonSales = salespeople.map(sp => groupedBySalesperson[sp]);
+
+            Plotly.newPlot('top-salespeople-chart', [{
+                x: salespersonSales,
+                y: salespeople,
+                type: 'bar',
+                orientation: 'h'
+            }], {
+                title: 'Top Salespeople by Total Sales',
+                xaxis: { title: 'Net Sales (IDR)' },
+                yaxis: { title: 'Salesperson' }
+            });
+
+            const groupedByRegion = data.reduce((acc, sale) => {
+                acc[sale.Wilayah] = acc[sale.Wilayah] || 0;
+                acc[sale.Wilayah] += sale.Net_Sales;
+                return acc;
+            }, {});
+
+            const regions = Object.keys(groupedByRegion);
+            const regionSales = regions.map(reg => groupedByRegion[reg]);
+
+            Plotly.newPlot('sales-by-region-chart', [{
+                x: regions,
+                y: regionSales,
+                type: 'bar'
+            }], {
+                title: 'Sales by Region',
+                xaxis: { title: 'Region' },
+                yaxis: { title: 'Net Sales (IDR)' }
+            });
+
+            const feedback = data.map(sale => sale.Feedback);
+            const feedbackCounts = feedback.reduce((acc, fb) => {
+                acc[fb] = (acc[fb] || 0) + 1;
+                return acc;
+            }, {});
+
+            const feedbackLabels = Object.keys(feedbackCounts);
+            const feedbackValues = feedbackLabels.map(label => feedbackCounts[label]);
+
+            Plotly.newPlot('feedback-analysis-chart', [{
+                labels: feedbackLabels,
+                values: feedbackValues,
+                type: 'pie'
+            }], {
+                title: 'Customer Feedback Analysis'
+            });
+        }
+    </script>
+</body>
+</html>
